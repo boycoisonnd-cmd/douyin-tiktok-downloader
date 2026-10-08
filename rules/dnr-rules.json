@@ -57,5 +57,92 @@
       "urlFilter": "||tiktokcdn.com",
       "resourceTypes": ["xmlhttprequest", "media", "other"]
     }
+  },
+  {
+    "id": 4,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Referer",
+          "operation": "set",
+          "value": "https://www.instagram.com/"
+        },
+        {
+          "header": "Origin",
+          "operation": "set",
+          "value": "https://www.instagram.com"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||cdninstagram.com",
+      "resourceTypes": ["xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 5,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Referer",
+          "operation": "set",
+          "value": "https://www.instagram.com/"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||fbcdn.net",
+      "resourceTypes": ["xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 6,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Referer",
+          "operation": "set",
+          "value": "https://x.com/"
+        },
+        {
+          "header": "Origin",
+          "operation": "set",
+          "value": "https://x.com"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||twimg.com",
+      "resourceTypes": ["xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 7,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Referer",
+          "operation": "set",
+          "value": "https://www.youtube.com/"
+        },
+        {
+          "header": "Origin",
+          "operation": "set",
+          "value": "https://www.youtube.com"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||googlevideo.com",
+      "resourceTypes": ["xmlhttprequest", "media", "other"]
+    }
   }
 ]

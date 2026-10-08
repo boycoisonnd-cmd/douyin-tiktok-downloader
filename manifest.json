@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Douyin & TikTok Video Downloader Pro",
-  "version": "1.0.0",
-  "description": "Quét toàn bộ video/ảnh kênh Douyin & TikTok, tải hàng loạt không watermark trực tiếp vào thư mục máy tính.",
+  "name": "Social Media Video Downloader Pro (Douyin, TikTok, IG, X, YouTube)",
+  "version": "2.0.0",
+  "description": "Quét toàn bộ video/ảnh từ Douyin, TikTok, Instagram, X (Twitter) và YouTube. Tải hàng loạt không watermark trực tiếp vào thư mục máy tính.",
   "permissions": [
     "sidePanel",
     "storage",
@@ -18,7 +18,16 @@
     "*://*.amemv.com/*",
     "*://*.tiktokcdn.com/*",
     "*://*.byteoversea.com/*",
-    "*://*.ibyteimg.com/*"
+    "*://*.ibyteimg.com/*",
+    "*://*.instagram.com/*",
+    "*://*.cdninstagram.com/*",
+    "*://*.fbcdn.net/*",
+    "*://*.x.com/*",
+    "*://*.twitter.com/*",
+    "*://*.twimg.com/*",
+    "*://*.youtube.com/*",
+    "*://*.googlevideo.com/*",
+    "*://*.ytimg.com/*"
   ],
   "declarative_net_request": {
     "rule_resources": [
@@ -37,13 +46,17 @@
     "default_path": "src/sidepanel/index.html"
   },
   "action": {
-    "default_title": "Mở Douyin Downloader Panel"
+    "default_title": "Mở Video Downloader Panel"
   },
   "content_scripts": [
     {
       "matches": [
         "*://*.douyin.com/*",
-        "*://*.tiktok.com/*"
+        "*://*.tiktok.com/*",
+        "*://*.instagram.com/*",
+        "*://*.x.com/*",
+        "*://*.twitter.com/*",
+        "*://*.youtube.com/*"
       ],
       "js": ["src/content-scripts/main-interceptor.iife.ts"],
       "world": "MAIN",
@@ -52,7 +65,11 @@
     {
       "matches": [
         "*://*.douyin.com/*",
-        "*://*.tiktok.com/*"
+        "*://*.tiktok.com/*",
+        "*://*.instagram.com/*",
+        "*://*.x.com/*",
+        "*://*.twitter.com/*",
+        "*://*.youtube.com/*"
       ],
       "js": ["src/content-scripts/isolated-bridge.iife.ts"],
       "world": "ISOLATED",

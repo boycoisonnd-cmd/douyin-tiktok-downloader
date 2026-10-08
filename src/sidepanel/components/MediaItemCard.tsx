@@ -26,6 +26,25 @@ export const MediaItemCard: React.FC<MediaItemCardProps> = ({ item }) => {
   const isSelected = selectedIds.has(item.id);
   const isVideo = item.type === 'video';
 
+  const getPlatformBadge = (platform?: string) => {
+    switch (platform) {
+      case 'douyin':
+        return { label: 'Douyin', className: 'bg-[#FE2C55] text-white' };
+      case 'tiktok':
+        return { label: 'TikTok', className: 'bg-black text-[#00F2FE] border border-gray-700' };
+      case 'instagram':
+        return { label: 'Instagram', className: 'bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white' };
+      case 'x':
+        return { label: 'X', className: 'bg-black text-[#1D9BF0] border border-[#1D9BF0]' };
+      case 'youtube':
+        return { label: 'YouTube', className: 'bg-[#FF0000] text-white' };
+      default:
+        return null;
+    }
+  };
+
+  const platformBadge = getPlatformBadge(item.platform);
+
   return (
     <div
       onClick={() => toggleSelect(item.id)}
@@ -53,8 +72,8 @@ export const MediaItemCard: React.FC<MediaItemCardProps> = ({ item }) => {
         {/* Dark gradient overlay on thumbnail bottom */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none" />
 
-        {/* Selection Checkbox (Top Left) */}
-        <div className="absolute top-2 left-2 z-10">
+        {/* Selection Checkbox & Platform Badge (Top Left) */}
+        <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5">
           <div
             className={`w-5 h-5 rounded flex items-center justify-center transition-all ${
               isSelected
@@ -69,6 +88,14 @@ export const MediaItemCard: React.FC<MediaItemCardProps> = ({ item }) => {
               <path d="M0 11l2-2 5 5L18 3l2 2L7 18z" />
             </svg>
           </div>
+
+          {platformBadge && (
+            <span
+              className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider shadow backdrop-blur-sm ${platformBadge.className}`}
+            >
+              {platformBadge.label}
+            </span>
+          )}
         </div>
 
         {/* Single Quick Download Button (Top Right) */}
@@ -85,22 +112,22 @@ export const MediaItemCard: React.FC<MediaItemCardProps> = ({ item }) => {
 
         {/* Badges: Type & Resolution */}
         <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between pointer-events-none text-[10px]">
-          {/* Left badge: HD or Album count */}
-          {isVideo ? (
-            <span className="flex items-center gap-0.5 bg-black/70 backdrop-blur-sm text-[#25F4EE] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
-              <Sparkles size={9} />
-              {item.videoDetails?.height && item.videoDetails.height >= 1080 ? '1080P' : 'HD'}
+          {/* Left badge: HD / Quality label / Album count */}
+          <span className="flex items-center gap-1 bg-black/75 backdrop-blur-sm text-[#25F4EE] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+            {isVideo ? <Sparkles size={9} /> : <Layers size={9} className="text-[#FE2C55]" />}
+            <span>
+              {item.qualityLabel ||
+                (isVideo
+                  ? item.videoDetails?.height && item.videoDetails.height >= 1080
+                    ? '1080P'
+                    : 'HD'
+                  : `${(item.albumDetails?.mixedMedia?.length || item.albumDetails?.imageUrls.length || 1)} mục`)}
             </span>
-          ) : (
-            <span className="flex items-center gap-1 bg-[#FE2C55]/90 backdrop-blur-sm text-white px-1.5 py-0.5 rounded font-bold">
-              <Layers size={9} />
-              {item.albumDetails?.imageUrls.length || 0} ảnh
-            </span>
-          )}
+          </span>
 
           {/* Right badge: Duration */}
           {isVideo && item.duration > 0 && (
-            <span className="flex items-center gap-0.5 bg-black/70 backdrop-blur-sm text-gray-200 px-1.5 py-0.5 rounded font-medium">
+            <span className="flex items-center gap-0.5 bg-black/75 backdrop-blur-sm text-gray-200 px-1.5 py-0.5 rounded font-medium">
               <Clock size={9} />
               {formatDuration(item.duration)}
             </span>

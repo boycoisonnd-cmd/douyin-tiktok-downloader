@@ -2,6 +2,7 @@ import { MediaItem } from '../parsers/parser.interface';
 import { formatMediaFileName, sanitizeFileName } from '../../utils/sanitize-filename';
 import { FileSystemManager } from './file-system-manager';
 import { formatBytes } from '../../utils/formatters';
+import { YouTubeResolver } from './youtube-resolver';
 
 export interface DownloadProgressInfo {
   id: string;
@@ -39,7 +40,18 @@ export class StreamDownloader {
     onProgress?: (info: DownloadProgressInfo) => void,
     abortSignal?: AbortSignal
   ): Promise<void> {
-    const urls = item.videoDetails?.downloadUrls || [];
+    let urls = [...(item.videoDetails?.downloadUrls || [])];
+
+    // Đối với YouTube: Resolve stream URL MP4 trực tiếp trước khi tải
+    if (item.platform === 'youtube' || item.videoDetails?.needsPlayerResolution) {
+      try {
+        const directUrl = await YouTubeResolver.resolveDirectUrl(item.id);
+        urls = [directUrl, ...urls];
+      } catch (err: any) {
+        console.warn('Không thể resolve trực tiếp YouTube URL:', err);
+      }
+    }
+
     if (urls.length === 0) {
       throw new Error('Không tìm thấy link tải video hợp lệ.');
     }
@@ -67,7 +79,7 @@ export class StreamDownloader {
   }
 
   /**
-   * Tải album ảnh và nhạc nền vào một thư mục con
+   * Tải album ảnh và nhạc nền vào một thư mục con (hỗ trợ cả album hỗn hợp ảnh/video)
    */
   private static async downloadAlbum(
     item: MediaItem,
@@ -76,41 +88,73 @@ export class StreamDownloader {
     abortSignal?: AbortSignal
   ): Promise<void> {
     const albumDetails = item.albumDetails;
+    const mixedMedia = albumDetails?.mixedMedia || [];
     const imageUrls = albumDetails?.imageUrls || [];
-    if (imageUrls.length === 0) {
-      throw new Error('Album không chứa hình ảnh nào.');
+
+    const totalCount = mixedMedia.length > 0 ? mixedMedia.length : imageUrls.length;
+    if (totalCount === 0) {
+      throw new Error('Album không chứa hình ảnh hoặc video nào.');
     }
 
     // Tạo thư mục con cho Album
     const folderName = `[ALBUM]_${item.id}_${sanitizeFileName(item.title, 40)}`;
     const albumFolderHandle = await FileSystemManager.getAlbumFolder(authorDirHandle, folderName);
 
-    const totalFiles = imageUrls.length + (albumDetails?.musicUrl ? 1 : 0);
+    const totalFiles = totalCount + (albumDetails?.musicUrl ? 1 : 0);
     let completedFiles = 0;
 
-    // Tải từng ảnh
-    for (let i = 0; i < imageUrls.length; i++) {
-      if (abortSignal?.aborted) throw new Error('Tải xuống đã bị hủy.');
+    // 1. Tải Album hỗn hợp (Instagram/X Carousel có cả video và ảnh)
+    if (mixedMedia.length > 0) {
+      for (let i = 0; i < mixedMedia.length; i++) {
+        if (abortSignal?.aborted) throw new Error('Tải xuống đã bị hủy.');
 
-      const imgUrl = imageUrls[i];
-      const imgFileName = `${String(i + 1).padStart(2, '0')}.jpg`;
+        const media = mixedMedia[i];
+        const ext = media.type === 'video' ? 'mp4' : 'jpg';
+        const fileName = `${String(i + 1).padStart(2, '0')}.${ext}`;
 
-      try {
-        await this.streamUrlToFile(imgUrl, albumFolderHandle, imgFileName, item.id, undefined, abortSignal);
-      } catch (e) {
-        console.warn(`Không thể tải ảnh ${imgFileName}:`, e);
+        try {
+          await this.streamUrlToFile(media.url, albumFolderHandle, fileName, item.id, undefined, abortSignal);
+        } catch (e) {
+          console.warn(`Không thể tải file ${fileName}:`, e);
+        }
+
+        completedFiles++;
+        const percent = Math.round((completedFiles / totalFiles) * 100);
+        onProgress?.({
+          id: item.id,
+          progress: percent,
+          downloadedBytes: 0,
+          totalBytes: 0,
+          speed: `${completedFiles}/${totalFiles} file`,
+          status: 'downloading',
+        });
       }
+    }
+    // 2. Tải Album ảnh thông thường
+    else {
+      for (let i = 0; i < imageUrls.length; i++) {
+        if (abortSignal?.aborted) throw new Error('Tải xuống đã bị hủy.');
 
-      completedFiles++;
-      const percent = Math.round((completedFiles / totalFiles) * 100);
-      onProgress?.({
-        id: item.id,
-        progress: percent,
-        downloadedBytes: 0,
-        totalBytes: 0,
-        speed: `${completedFiles}/${totalFiles} file`,
-        status: 'downloading',
-      });
+        const imgUrl = imageUrls[i];
+        const imgFileName = `${String(i + 1).padStart(2, '0')}.jpg`;
+
+        try {
+          await this.streamUrlToFile(imgUrl, albumFolderHandle, imgFileName, item.id, undefined, abortSignal);
+        } catch (e) {
+          console.warn(`Không thể tải ảnh ${imgFileName}:`, e);
+        }
+
+        completedFiles++;
+        const percent = Math.round((completedFiles / totalFiles) * 100);
+        onProgress?.({
+          id: item.id,
+          progress: percent,
+          downloadedBytes: 0,
+          totalBytes: 0,
+          speed: `${completedFiles}/${totalFiles} file`,
+          status: 'downloading',
+        });
+      }
     }
 
     // Tải nhạc nền nếu có

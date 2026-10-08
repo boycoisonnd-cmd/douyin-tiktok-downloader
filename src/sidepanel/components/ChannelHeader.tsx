@@ -12,12 +12,31 @@ export const ChannelHeader: React.FC = () => {
   const albumCount = items.filter((i) => i.type === 'album').length;
   const completedCount = items.filter((i) => i.downloadStatus === 'completed').length;
 
+  const getPlatformInfo = (plat: string | null) => {
+    switch (plat) {
+      case 'douyin':
+        return { label: 'Douyin', badgeClass: 'bg-[#FE2C55] text-white', ringClass: 'from-[#25F4EE] via-[#FE2C55] to-[#FF007A]' };
+      case 'tiktok':
+        return { label: 'TikTok', badgeClass: 'bg-black text-[#00F2FE] border border-gray-700', ringClass: 'from-[#00F2FE] via-black to-[#FE2C55]' };
+      case 'instagram':
+        return { label: 'Instagram', badgeClass: 'bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white', ringClass: 'from-[#F58529] via-[#DD2A7B] to-[#8134AF]' };
+      case 'x':
+        return { label: 'X', badgeClass: 'bg-black text-white border border-[#1D9BF0]', ringClass: 'from-[#1D9BF0] to-gray-800' };
+      case 'youtube':
+        return { label: 'YouTube', badgeClass: 'bg-[#FF0000] text-white', ringClass: 'from-[#FF0000] to-red-800' };
+      default:
+        return { label: '', badgeClass: 'bg-gray-700 text-gray-200', ringClass: 'from-[#25F4EE] via-[#FE2C55] to-[#FF007A]' };
+    }
+  };
+
+  const platformInfo = getPlatformInfo(platform);
+
   return (
     <div className="bg-[#1F2232] border-b border-[#2E3245] p-3.5 shadow-md">
       <div className="flex items-center gap-3">
         {/* Avatar with gradient ring */}
         <div className="relative">
-          <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-[#25F4EE] via-[#FE2C55] to-[#FF007A]">
+          <div className={`w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr ${platformInfo.ringClass}`}>
             {author?.avatar ? (
               <img
                 src={author.avatar}
@@ -32,11 +51,9 @@ export const ChannelHeader: React.FC = () => {
           </div>
           {platform && (
             <span
-              className={`absolute -bottom-1 -right-1 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider text-white shadow ${
-                platform === 'douyin' ? 'bg-[#FE2C55]' : 'bg-black border border-gray-600'
-              }`}
+              className={`absolute -bottom-1 -right-1 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider shadow ${platformInfo.badgeClass}`}
             >
-              {platform}
+              {platformInfo.label}
             </span>
           )}
         </div>
@@ -44,9 +61,16 @@ export const ChannelHeader: React.FC = () => {
         {/* Channel info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-white truncate leading-tight">
-              {author?.name || 'Chưa phát hiện kênh'}
-            </h2>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <h2 className="text-sm font-bold text-white truncate leading-tight">
+                {author?.name || 'Chưa phát hiện kênh'}
+              </h2>
+              {author?.verified && (
+                <span title="Tài khoản đã xác minh" className="text-sky-400 shrink-0">
+                  <CheckCircle2 size={13} className="fill-sky-400/20" />
+                </span>
+              )}
+            </div>
             <button
               onClick={refreshForCurrentTab}
               title="Làm mới thông tin kênh từ tab hiện tại"
@@ -56,7 +80,7 @@ export const ChannelHeader: React.FC = () => {
             </button>
           </div>
           <p className="text-[11px] text-gray-400 truncate mt-0.5">
-            {author?.uniqueId ? `@${author.uniqueId}` : (author?.id ? `ID: ${author.id}` : 'Mở tab Douyin/TikTok để bắt đầu')}
+            {author?.uniqueId ? `@${author.uniqueId}` : (author?.id ? `ID: ${author.id}` : 'Mở tab Douyin, TikTok, IG, X hoặc YouTube')}
           </p>
         </div>
       </div>

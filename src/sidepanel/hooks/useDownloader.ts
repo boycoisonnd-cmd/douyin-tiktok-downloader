@@ -42,8 +42,8 @@ export function useDownloader() {
       return;
     }
 
-    const channelName = author?.name || 'Douyin_Channel';
-    const channelId = author?.id || author?.secUid;
+    const channelName = author?.name || selectedItems[0]?.author?.name || 'Media_Channel';
+    const channelId = author?.id || author?.secUid || selectedItems[0]?.author?.id;
 
     // Cập nhật số luồng tải đồng thời
     queueManagerRef.current.setConcurrency(concurrency);
@@ -58,7 +58,7 @@ export function useDownloader() {
         selectedItems,
         channelName,
         channelId,
-        platform || 'douyin'
+        platform || selectedItems[0]?.platform || 'douyin'
       );
     } catch (err: any) {
       alert(`Lỗi khi bắt đầu tải: ${err.message}`);
@@ -70,9 +70,9 @@ export function useDownloader() {
     async (item: MediaItem) => {
       try {
         updateItemProgress(item.id, 0, 'Đang chuẩn bị...', 'downloading');
-        const channelName = author?.name || item.author?.name || 'Douyin_Media';
+        const channelName = author?.name || item.author?.name || 'Media_Channel';
         const authorDirHandle = await FileSystemManager.getAuthorFolder(
-          item.platform,
+          item.platform || platform || 'media',
           channelName,
           author?.id || item.author?.id
         );

@@ -45,8 +45,12 @@ export class ScrollController {
   private scheduleNextScroll() {
     if (!this.isScanning) return;
 
-    // Thời gian chờ ngẫu nhiên giữa các lần cuộn (1200ms - 2200ms) để giống người dùng thật
-    const randomDelay = Math.floor(Math.random() * 1000) + 1200;
+    // Thời gian chờ ngẫu nhiên: X và Instagram dùng delay dài hơn để chống rate limit
+    const host = window.location.hostname;
+    const isStrictPlatform = host.includes('instagram.com') || host.includes('x.com') || host.includes('twitter.com');
+    const minDelay = isStrictPlatform ? 1600 : 1200;
+    const maxJitter = isStrictPlatform ? 1200 : 800;
+    const randomDelay = Math.floor(Math.random() * maxJitter) + minDelay;
 
     this.scrollTimer = setTimeout(() => {
       this.performScrollStep();
@@ -56,10 +60,10 @@ export class ScrollController {
   private performScrollStep() {
     if (!this.isScanning) return;
 
-    // 1. Kiểm tra CAPTCHA
+    // 1. Kiểm tra CAPTCHA & Login Wall
     if (this.detectCaptcha()) {
-      this.stop('Phát hiện xác minh CAPTCHA! Vui lòng hoàn thành xác minh trên trang rồi bấm Quét tiếp.');
-      this.onStatusChange?.('captcha_detected', 'Phát hiện xác minh CAPTCHA trên màn hình!');
+      this.stop('Phát hiện xác minh CAPTCHA hoặc yêu cầu đăng nhập! Vui lòng hoàn thành trên trang rồi bấm Quét tiếp.');
+      this.onStatusChange?.('captcha_detected', 'Phát hiện xác minh bảo mật hoặc hộp thoại đăng nhập!');
       return;
     }
 
@@ -92,7 +96,7 @@ export class ScrollController {
   }
 
   /**
-   * Phát hiện popup CAPTCHA / trượt hình của Douyin hoặc TikTok
+   * Phát hiện popup CAPTCHA / trượt hình / Login wall trên các nền tảng
    */
   private detectCaptcha(): boolean {
     const captchaSelectors = [
@@ -102,6 +106,12 @@ export class ScrollController {
       '[id*="captcha"]',
       '.verify-bar-close',
       '.tiktok-captcha-container',
+      // Instagram login dialog
+      '#loginForm',
+      'form[action*="login"]',
+      // X (Twitter) Arkose challenge
+      'iframe[src*="arkose"]',
+      'iframe[src*="challenge"]',
     ];
 
     for (const selector of captchaSelectors) {
