@@ -1,0 +1,67 @@
+{
+  "manifest_version": 3,
+  "name": "Douyin & TikTok Video Downloader Pro",
+  "version": "1.0.0",
+  "description": "Quét toàn bộ video/ảnh kênh Douyin & TikTok, tải hàng loạt không watermark trực tiếp vào thư mục máy tính.",
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "declarativeNetRequest",
+    "scripting",
+    "tabs",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "*://*.douyin.com/*",
+    "*://*.tiktok.com/*",
+    "*://*.douyinvod.com/*",
+    "*://*.amemv.com/*",
+    "*://*.tiktokcdn.com/*",
+    "*://*.byteoversea.com/*",
+    "*://*.ibyteimg.com/*"
+  ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ruleset_1",
+        "enabled": true,
+        "path": "rules/dnr-rules.json"
+      }
+    ]
+  },
+  "background": {
+    "service_worker": "src/background/service-worker.ts",
+    "type": "module"
+  },
+  "side_panel": {
+    "default_path": "src/sidepanel/index.html"
+  },
+  "action": {
+    "default_title": "Mở Douyin Downloader Panel"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.douyin.com/*",
+        "*://*.tiktok.com/*"
+      ],
+      "js": ["src/content-scripts/main-interceptor.iife.ts"],
+      "world": "MAIN",
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "*://*.douyin.com/*",
+        "*://*.tiktok.com/*"
+      ],
+      "js": ["src/content-scripts/isolated-bridge.iife.ts"],
+      "world": "ISOLATED",
+      "run_at": "document_start"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

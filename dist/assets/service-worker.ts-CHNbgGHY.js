@@ -1,0 +1,1 @@
+var r,n;(n=(r=chrome.sidePanel)==null?void 0:r.setPanelBehavior({openPanelOnActionClick:!0}))==null||n.catch(e=>console.error("Lỗi cấu hình side panel behavior:",e));chrome.runtime.onMessage.addListener((e,i,o)=>(e.type==="PING"&&o({status:"PONG"}),!0));console.log("[Background Service Worker] Initialized successfully");
