@@ -54,8 +54,9 @@ export function useScanner() {
     }
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (tab?.id) {
-        chrome.tabs.sendMessage(tab.id, { type: 'GET_PAGE_INFO' }, (response) => {
+      const tabId = tab?.id;
+      if (tabId) {
+        chrome.tabs.sendMessage(tabId, { type: 'GET_PAGE_INFO' }, (response) => {
           if (chrome.runtime?.lastError) {
             return;
           }
@@ -70,6 +71,10 @@ export function useScanner() {
 
             if (response.isScanning) {
               setScanning(true, 'Đang tự động cuộn trang quét video...');
+            } else {
+              chrome.tabs.sendMessage(tabId, { type: 'TRIGGER_DOM_SCAN' }, () => {
+                if (chrome.runtime?.lastError) {}
+              });
             }
           }
         });
@@ -86,8 +91,9 @@ export function useScanner() {
       checkActiveTab();
     };
 
-    const handleTabUpdated = (_tabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
-      if (changeInfo.status === 'complete' || changeInfo.url) {
+    const handleTabUpdated = (_tabId: number, changeInfo: chrome.tabs.TabChangeInfo, tab?: chrome.tabs.Tab) => {
+      // Chỉ kiểm tra khi sự kiện phát sinh từ chính tab đang active
+      if (tab?.active && (changeInfo.status === 'complete' || changeInfo.url)) {
         checkActiveTab();
       }
     };
@@ -133,18 +139,23 @@ export function useScanner() {
 
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (tab?.id) {
-        chrome.tabs.sendMessage(tab.id, { type: 'GET_PAGE_INFO' }, async (response) => {
+      const tabId = tab?.id;
+      if (tabId) {
+        chrome.tabs.sendMessage(tabId, { type: 'GET_PAGE_INFO' }, async (response) => {
           if (response?.success) {
             let newAuthor = undefined;
             if (response.channelName || response.channelId) {
               newAuthor = {
                 id: response.channelId || '',
+                uniqueId: response.channelId || '',
                 name: response.channelName || 'Kênh mới',
                 avatar: response.channelAvatar || '',
               };
             }
             await resetForNewChannel(newAuthor, response.platform);
+            chrome.tabs.sendMessage(tabId, { type: 'TRIGGER_DOM_SCAN' }, () => {
+              if (chrome.runtime?.lastError) {}
+            });
           } else {
             await resetForNewChannel();
           }
@@ -240,11 +251,41 @@ export function useScanner() {
               progress: 0,
               qualityLabel: 'Shorts',
             },
+            {
+              id: 'fb_reel_777888',
+              platform: 'facebook',
+              type: 'video',
+              title: 'Facebook Reels: Video giải trí triệu view sắc nét 1080P',
+              coverUrl: 'https://images.unsplash.com/photo-1579202673506-ca3ce28943ef?w=500&q=80',
+              duration: 45,
+              stats: { diggCount: 125000, commentCount: 3400, shareCount: 1520 },
+              author: { id: 'meta_creators', name: 'Meta Creators Official', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80', verified: true },
+              videoDetails: { downloadUrls: ['https://example.com/fb_reel.mp4'], bestUrl: 'https://example.com/fb_reel.mp4', height: 1080 },
+              createTime: Math.floor(Date.now() / 1000) - 21600,
+              downloadStatus: 'idle',
+              progress: 0,
+              qualityLabel: 'Reels 1080P',
+            },
+            {
+              id: 'threads_post_555666',
+              platform: 'threads',
+              type: 'video',
+              title: 'Threads: Khoảnh khắc chia sẻ hàng ngày cực nét',
+              coverUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=500&q=80',
+              duration: 28,
+              stats: { diggCount: 45000, commentCount: 1890, shareCount: 760 },
+              author: { id: 'zuck', uniqueId: '@zuck', name: 'Mark Zuckerberg', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80', verified: true },
+              videoDetails: { downloadUrls: ['https://example.com/threads_video.mp4'], bestUrl: 'https://example.com/threads_video.mp4', height: 1080 },
+              createTime: Math.floor(Date.now() / 1000) - 25200,
+              downloadStatus: 'idle',
+              progress: 0,
+              qualityLabel: '1080P',
+            },
           ],
           { id: 'all_creators', name: 'Universal Demo Creator', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80', verified: true },
           'douyin'
         );
-        setScanning(false, 'Đã quét xong 5 video mô phỏng (Douyin, TikTok, IG, X, YouTube)');
+        setScanning(false, 'Đã quét xong 7 video mô phỏng (Douyin, TikTok, IG, X, YouTube, FB, Threads)');
       }, 1000);
       return;
     }
@@ -260,10 +301,12 @@ export function useScanner() {
         url.includes('instagram.com') ||
         url.includes('x.com') ||
         url.includes('twitter.com') ||
-        url.includes('youtube.com');
+        url.includes('youtube.com') ||
+        url.includes('facebook.com') ||
+        url.includes('threads.net');
 
       if (!isSupportedPlatform) {
-        alert('Vui lòng mở một trang cá nhân hoặc kênh trên Douyin, TikTok, Instagram, X (Twitter) hoặc YouTube trước khi bấm Quét!');
+        alert('Vui lòng mở một trang cá nhân hoặc kênh trên Douyin, TikTok, Instagram, X (Twitter), YouTube, Facebook hoặc Threads trước khi bấm Quét!');
         return;
       }
 

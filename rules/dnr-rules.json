@@ -83,7 +83,7 @@
   },
   {
     "id": 5,
-    "priority": 1,
+    "priority": 2,
     "action": {
       "type": "modifyHeaders",
       "requestHeaders": [
@@ -91,11 +91,17 @@
           "header": "Referer",
           "operation": "set",
           "value": "https://www.instagram.com/"
+        },
+        {
+          "header": "Origin",
+          "operation": "set",
+          "value": "https://www.instagram.com"
         }
       ]
     },
     "condition": {
       "urlFilter": "||fbcdn.net",
+      "initiatorDomains": ["instagram.com"],
       "resourceTypes": ["xmlhttprequest", "media", "other"]
     }
   },
@@ -142,6 +148,75 @@
     },
     "condition": {
       "urlFilter": "||googlevideo.com",
+      "resourceTypes": ["xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 8,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Referer",
+          "operation": "set",
+          "value": "https://www.facebook.com/"
+        },
+        {
+          "header": "Origin",
+          "operation": "set",
+          "value": "https://www.facebook.com"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||fbcdn.net",
+      "resourceTypes": ["xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 9,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Referer",
+          "operation": "set",
+          "value": "https://www.facebook.com/"
+        },
+        {
+          "header": "Origin",
+          "operation": "set",
+          "value": "https://www.facebook.com"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||fbsbx.com",
+      "resourceTypes": ["xmlhttprequest", "media", "other"]
+    }
+  },
+  {
+    "id": 10,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Referer",
+          "operation": "set",
+          "value": "https://www.threads.net/"
+        },
+        {
+          "header": "Origin",
+          "operation": "set",
+          "value": "https://www.threads.net"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||threads.net",
       "resourceTypes": ["xmlhttprequest", "media", "other"]
     }
   }

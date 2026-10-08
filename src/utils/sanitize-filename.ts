@@ -52,7 +52,8 @@ export function formatMediaFileName(
 }
 
 /**
- * Định dạng tên thư mục cho kênh tác giả: [DOUYIN/TIKTOK]_[Tên_kênh]_[ID]
+ * Định dạng tên thư mục cho kênh tác giả: [PLATFORM]_[Tên_kênh]_[ID/Handle]
+ * Hỗ trợ: Douyin, TikTok, Instagram, X, YouTube, Facebook, Threads
  */
 export function formatAuthorFolderName(platform: string, authorName: string, authorId?: string): string {
   const cleanPlatform = platform.toUpperCase();

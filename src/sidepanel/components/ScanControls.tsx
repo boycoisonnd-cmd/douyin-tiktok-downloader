@@ -18,6 +18,8 @@ export const ScanControls: React.FC = () => {
   const isDifferentTabChannel = Boolean(
     detectedTab?.channelName &&
     author?.name &&
+    typeof detectedTab.channelName === 'string' &&
+    typeof author.name === 'string' &&
     detectedTab.channelName.toLowerCase() !== author.name.toLowerCase()
   );
 

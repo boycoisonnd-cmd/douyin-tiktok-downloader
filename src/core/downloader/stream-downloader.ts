@@ -69,7 +69,7 @@ export class StreamDownloader {
         await this.streamUrlToFile(url, authorDirHandle, fileName, item.id, onProgress, abortSignal);
         return; // Tải thành công!
       } catch (err: any) {
-        if (abortSignal?.aborted) throw err;
+        if (abortSignal?.aborted || err?.name === 'AbortError' || err?.message?.includes('hủy')) throw err;
         console.warn(`Lỗi khi tải URL ${url}:`, err);
         lastError = err;
       }
@@ -114,7 +114,8 @@ export class StreamDownloader {
 
         try {
           await this.streamUrlToFile(media.url, albumFolderHandle, fileName, item.id, undefined, abortSignal);
-        } catch (e) {
+        } catch (e: any) {
+          if (abortSignal?.aborted || e?.name === 'AbortError' || e?.message?.includes('hủy')) throw e;
           console.warn(`Không thể tải file ${fileName}:`, e);
         }
 
@@ -140,7 +141,8 @@ export class StreamDownloader {
 
         try {
           await this.streamUrlToFile(imgUrl, albumFolderHandle, imgFileName, item.id, undefined, abortSignal);
-        } catch (e) {
+        } catch (e: any) {
+          if (abortSignal?.aborted || e?.name === 'AbortError' || e?.message?.includes('hủy')) throw e;
           console.warn(`Không thể tải ảnh ${imgFileName}:`, e);
         }
 
@@ -159,6 +161,7 @@ export class StreamDownloader {
 
     // Tải nhạc nền nếu có
     if (albumDetails?.musicUrl) {
+      if (abortSignal?.aborted) throw new Error('Tải xuống đã bị hủy.');
       try {
         await this.streamUrlToFile(
           albumDetails.musicUrl,
@@ -168,10 +171,13 @@ export class StreamDownloader {
           undefined,
           abortSignal
         );
-      } catch (e) {
+      } catch (e: any) {
+        if (abortSignal?.aborted || e?.name === 'AbortError' || e?.message?.includes('hủy')) throw e;
         console.warn('Không thể tải nhạc nền album:', e);
       }
     }
+
+    if (abortSignal?.aborted) throw new Error('Tải xuống đã bị hủy.');
 
     onProgress?.({
       id: item.id,

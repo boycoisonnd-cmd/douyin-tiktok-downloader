@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "tsx scripts/test-parsers.mjs"
+    "test": "tsx scripts/test-parsers.mjs && tsx scripts/test-queue-cancel.ts"
   },
   "dependencies": {
     "idb": "^8.0.2",

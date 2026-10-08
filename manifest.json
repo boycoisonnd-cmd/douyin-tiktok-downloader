@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Social Media Video Downloader Pro (Douyin, TikTok, IG, X, YouTube)",
-  "version": "2.0.0",
-  "description": "Quét toàn bộ video/ảnh từ Douyin, TikTok, Instagram, X (Twitter) và YouTube. Tải hàng loạt không watermark trực tiếp vào thư mục máy tính.",
+  "name": "Social Media Video Downloader Pro (Douyin, TikTok, IG, X, YouTube, FB, Threads)",
+  "version": "2.1.0",
+  "description": "Quét toàn bộ video/ảnh từ Douyin, TikTok, Instagram, X (Twitter), YouTube, Facebook và Threads. Tải hàng loạt không watermark trực tiếp vào thư mục máy tính.",
   "permissions": [
     "sidePanel",
     "storage",
@@ -27,7 +27,10 @@
     "*://*.twimg.com/*",
     "*://*.youtube.com/*",
     "*://*.googlevideo.com/*",
-    "*://*.ytimg.com/*"
+    "*://*.ytimg.com/*",
+    "*://*.facebook.com/*",
+    "*://*.threads.net/*",
+    "*://*.fbsbx.com/*"
   ],
   "declarative_net_request": {
     "rule_resources": [
@@ -56,7 +59,9 @@
         "*://*.instagram.com/*",
         "*://*.x.com/*",
         "*://*.twitter.com/*",
-        "*://*.youtube.com/*"
+        "*://*.youtube.com/*",
+        "*://*.facebook.com/*",
+        "*://*.threads.net/*"
       ],
       "js": ["src/content-scripts/main-interceptor.iife.ts"],
       "world": "MAIN",
@@ -69,7 +74,9 @@
         "*://*.instagram.com/*",
         "*://*.x.com/*",
         "*://*.twitter.com/*",
-        "*://*.youtube.com/*"
+        "*://*.youtube.com/*",
+        "*://*.facebook.com/*",
+        "*://*.threads.net/*"
       ],
       "js": ["src/content-scripts/isolated-bridge.iife.ts"],
       "world": "ISOLATED",

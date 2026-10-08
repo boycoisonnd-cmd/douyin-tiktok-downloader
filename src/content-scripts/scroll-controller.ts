@@ -6,9 +6,14 @@ export class ScrollController {
   private consecutiveSameHeightCount: number = 0;
   private lastScrollHeight: number = 0;
   private onStatusChange?: (status: ScrollStatus, message?: string) => void;
+  private onScrollStep?: () => void;
 
-  constructor(onStatusChange?: (status: ScrollStatus, message?: string) => void) {
+  constructor(
+    onStatusChange?: (status: ScrollStatus, message?: string) => void,
+    onScrollStep?: () => void
+  ) {
     this.onStatusChange = onStatusChange;
+    this.onScrollStep = onScrollStep;
   }
 
   public start() {
@@ -45,11 +50,16 @@ export class ScrollController {
   private scheduleNextScroll() {
     if (!this.isScanning) return;
 
-    // Thời gian chờ ngẫu nhiên: X và Instagram dùng delay dài hơn để chống rate limit
+    // Thời gian chờ ngẫu nhiên: X, Instagram, Facebook và Threads dùng delay dài hơn để chống rate limit
     const host = window.location.hostname;
-    const isStrictPlatform = host.includes('instagram.com') || host.includes('x.com') || host.includes('twitter.com');
-    const minDelay = isStrictPlatform ? 1600 : 1200;
-    const maxJitter = isStrictPlatform ? 1200 : 800;
+    const isStrictPlatform =
+      host.includes('instagram.com') ||
+      host.includes('x.com') ||
+      host.includes('twitter.com') ||
+      host.includes('facebook.com') ||
+      host.includes('threads.net');
+    const minDelay = isStrictPlatform ? 1400 : 900;
+    const maxJitter = isStrictPlatform ? 1000 : 600;
     const randomDelay = Math.floor(Math.random() * maxJitter) + minDelay;
 
     this.scrollTimer = setTimeout(() => {
@@ -60,10 +70,10 @@ export class ScrollController {
   private performScrollStep() {
     if (!this.isScanning) return;
 
-    // 1. Kiểm tra CAPTCHA & Login Wall
+    // 1. Kiểm tra CAPTCHA thực sự chặn màn hình
     if (this.detectCaptcha()) {
-      this.stop('Phát hiện xác minh CAPTCHA hoặc yêu cầu đăng nhập! Vui lòng hoàn thành trên trang rồi bấm Quét tiếp.');
-      this.onStatusChange?.('captcha_detected', 'Phát hiện xác minh bảo mật hoặc hộp thoại đăng nhập!');
+      this.stop('Phát hiện xác minh CAPTCHA! Vui lòng hoàn thành trên trang rồi bấm Quét tiếp.');
+      this.onStatusChange?.('captcha_detected', 'Phát hiện xác minh bảo mật hoặc CAPTCHA!');
       return;
     }
 
@@ -74,7 +84,7 @@ export class ScrollController {
     // Kiểm tra xem trang có mở rộng thêm chiều cao không
     if (scrollHeight === this.lastScrollHeight && (currentScrollY + clientHeight >= scrollHeight - 300)) {
       this.consecutiveSameHeightCount++;
-      if (this.consecutiveSameHeightCount >= 5) {
+      if (this.consecutiveSameHeightCount >= 6) {
         this.stop('Đã cuộn đến hết trang (không còn video mới).');
         return;
       }
@@ -92,32 +102,40 @@ export class ScrollController {
       behavior: 'smooth',
     });
 
+    // Kích hoạt callback quét DOM sau khi cuộn
+    try {
+      this.onScrollStep?.();
+    } catch (e) {}
+
     this.scheduleNextScroll();
   }
 
   /**
-   * Phát hiện popup CAPTCHA / trượt hình / Login wall trên các nền tảng
+   * Phát hiện popup CAPTCHA thực sự gây chặn thao tác
    */
   private detectCaptcha(): boolean {
-    const captchaSelectors = [
+    const blockingSelectors = [
       '#captcha-verify-image',
       '.captcha_verify_container',
       '.secsdk-captcha-drag-icon',
-      '[id*="captcha"]',
       '.verify-bar-close',
       '.tiktok-captcha-container',
-      // Instagram login dialog
-      '#loginForm',
-      'form[action*="login"]',
-      // X (Twitter) Arkose challenge
       'iframe[src*="arkose"]',
-      'iframe[src*="challenge"]',
+      '[data-testid="checkpoint_title"]',
+      '#checkpointProvider',
+      '[data-pagelet="LoginBar"]',
+      '[data-testid="royal_login_form"]',
+      '.login_form_container',
+      'form[action*="checkpoint"]',
     ];
 
-    for (const selector of captchaSelectors) {
+    for (const selector of blockingSelectors) {
       const el = document.querySelector(selector);
       if (el && (el as HTMLElement).offsetParent !== null) {
-        return true;
+        const rect = (el as HTMLElement).getBoundingClientRect();
+        if (rect.width > 150 && rect.height > 150) {
+          return true;
+        }
       }
     }
     return false;

@@ -33,7 +33,7 @@ export const MediaGrid: React.FC = () => {
         </div>
         <h4 className="text-sm font-semibold text-gray-200 mb-1">Chưa có video nào</h4>
         <p className="text-xs text-gray-400 max-w-[260px] leading-relaxed">
-          Mở tab một kênh Douyin hoặc TikTok trên trình duyệt, sau đó bấm{' '}
+          Mở tab một kênh Douyin, TikTok, Instagram, X, YouTube, Facebook hoặc Threads trên trình duyệt, sau đó bấm{' '}
           <strong className="text-white font-medium">"Quét toàn bộ video"</strong> ở trên để bắt đầu lấy dữ liệu.
         </p>
         <div className="mt-4 flex items-center gap-1.5 text-[11px] text-[#25F4EE] bg-[#171B26] px-3 py-1.5 rounded-full border border-[#2A3144]">

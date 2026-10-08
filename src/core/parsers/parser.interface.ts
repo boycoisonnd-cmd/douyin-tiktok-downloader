@@ -1,4 +1,4 @@
-export type PlatformType = 'douyin' | 'tiktok' | 'instagram' | 'x' | 'youtube';
+export type PlatformType = 'douyin' | 'tiktok' | 'instagram' | 'x' | 'youtube' | 'facebook' | 'threads';
 export type MediaType = 'video' | 'album';
 export type DownloadStatus = 'idle' | 'queued' | 'downloading' | 'completed' | 'error';
 

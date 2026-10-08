@@ -18,6 +18,7 @@ export class QueueManager {
   private abortController: AbortController | null = null;
   private isRunning: boolean = false;
   private isPaused: boolean = false;
+  private isCancelled: boolean = false;
 
   private onProgressCallback?: (info: DownloadProgressInfo) => void;
   private onQueueStatusCallback?: (status: QueueStatus) => void;
@@ -49,7 +50,9 @@ export class QueueManager {
 
     this.isRunning = true;
     this.isPaused = false;
+    this.isCancelled = false;
     this.abortController = new AbortController();
+    const currentSignal = this.abortController.signal;
     this.totalCount = items.length;
     this.completedCount = 0;
     this.failedCount = 0;
@@ -60,12 +63,17 @@ export class QueueManager {
       // 1. Mở cửa sổ chọn thư mục và tạo thư mục cho kênh tác giả
       const authorDirHandle = await FileSystemManager.getAuthorFolder(platform, authorName, authorId);
 
+      // Nếu trong lúc chờ chọn thư mục người dùng đã bấm hủy
+      if (this.isCancelled || currentSignal.aborted) {
+        return;
+      }
+
       // 2. Khởi tạo giới hạn số luồng đồng thời (p-limit)
       const limit = pLimit(this.concurrency);
 
       const downloadPromises = items.map((item) =>
         limit(async () => {
-          if (this.abortController?.signal.aborted) return;
+          if (this.isCancelled || currentSignal.aborted) return;
 
           // Thử lại tối đa 3 lần nếu lỗi mạng
           let attempts = 0;
@@ -73,7 +81,7 @@ export class QueueManager {
           let succeeded = false;
 
           while (attempts < maxRetries && !succeeded) {
-            if (this.abortController?.signal.aborted) return;
+            if (this.isCancelled || currentSignal.aborted) return;
 
             try {
               attempts++;
@@ -81,14 +89,16 @@ export class QueueManager {
                 item,
                 authorDirHandle,
                 (info) => {
-                  this.onProgressCallback?.(info);
+                  if (!this.isCancelled && !currentSignal.aborted) {
+                    this.onProgressCallback?.(info);
+                  }
                 },
-                this.abortController?.signal
+                currentSignal
               );
               succeeded = true;
               this.completedCount++;
             } catch (err: any) {
-              if (this.abortController?.signal.aborted) {
+              if (this.isCancelled || currentSignal.aborted || err?.name === 'AbortError' || err?.message?.includes('hủy')) {
                 return;
               }
 
@@ -106,20 +116,29 @@ export class QueueManager {
               } else {
                 // Exponential backoff trước khi thử lại (1s, 2s)
                 await new Promise((res) => setTimeout(res, attempts * 1000));
+                if (this.isCancelled || currentSignal.aborted) {
+                  return;
+                }
               }
             }
           }
 
-          this.emitQueueStatus();
+          if (!this.isCancelled && !currentSignal.aborted) {
+            this.emitQueueStatus();
+          }
         })
       );
 
       await Promise.all(downloadPromises);
     } catch (err: any) {
-      console.error('Lỗi hàng đợi tải:', err);
+      if (!this.isCancelled && !currentSignal.aborted) {
+        console.error('Lỗi hàng đợi tải:', err);
+      }
     } finally {
       this.isRunning = false;
-      this.emitQueueStatus();
+      if (!this.isCancelled) {
+        this.emitQueueStatus();
+      }
     }
   }
 
@@ -127,12 +146,15 @@ export class QueueManager {
    * Hủy toàn bộ hàng đợi đang tải
    */
   public cancel() {
-    if (this.abortController) {
-      this.abortController.abort();
-      this.abortController = null;
-    }
+    this.isCancelled = true;
     this.isRunning = false;
     this.isPaused = false;
+
+    if (this.abortController) {
+      this.abortController.abort();
+      // Giữ lại abortController để currentSignal.aborted không bị undefined
+    }
+
     this.emitQueueStatus();
   }
 
@@ -149,7 +171,7 @@ export class QueueManager {
       failed,
       inProgress,
       overallProgress,
-      isRunning: this.isRunning,
+      isRunning: this.isRunning && !this.isCancelled,
       isPaused: this.isPaused,
     };
   }

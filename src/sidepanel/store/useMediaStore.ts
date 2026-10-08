@@ -53,6 +53,7 @@ interface MediaState {
   setQueueStatus: (status: QueueStatus | null) => void;
   setDetectedTab: (tab: any) => void;
   resetForNewChannel: (newAuthor?: MediaAuthor, newPlatform?: PlatformType) => Promise<void>;
+  resetPendingDownloads: () => void;
   clearAll: () => Promise<void>;
   loadSavedData: () => Promise<void>;
 }
@@ -76,9 +77,8 @@ export const useMediaStore = create<MediaState>((set) => ({
       // 1. Kiểm tra xem có phải kênh mới khác với kênh đang lưu không
       const isDifferentAuthor = Boolean(
         author && state.author && (
-          (author.id && state.author.id && author.id !== state.author.id) ||
-          (author.secUid && state.author.secUid && author.secUid !== state.author.secUid) ||
-          (author.name && state.author.name && author.name !== state.author.name)
+          (author.id && state.author.id && author.id.toLowerCase() !== state.author.id.toLowerCase()) ||
+          (author.uniqueId && state.author.uniqueId && author.uniqueId.toLowerCase() !== state.author.uniqueId.toLowerCase())
         )
       );
 
@@ -89,22 +89,35 @@ export const useMediaStore = create<MediaState>((set) => ({
         // Tự động xóa danh sách kênh cũ khi quét sang kênh mới!
         existingMap = new Map();
         currentSelected = new Set();
-        getDB().then(async (db) => {
-          const tx = db.transaction([STORE_NAME, META_STORE], 'readwrite');
-          await tx.objectStore(STORE_NAME).clear();
-          await tx.done;
-        }).catch(console.error);
       } else {
         existingMap = new Map(state.items.map((i) => [i.id, i]));
         currentSelected = new Set(state.selectedIds);
       }
 
       const newlyAdded: MediaItem[] = [];
+      const itemsToSave: MediaItem[] = [];
 
       for (const item of newItems) {
         if (!existingMap.has(item.id)) {
           existingMap.set(item.id, item);
           newlyAdded.push(item);
+          itemsToSave.push(item);
+        } else {
+          // Nếu item đã có từ DOM scan nhưng item mới có dữ liệu phân giải cao hơn từ network API:
+          const existing = existingMap.get(item.id)!;
+          if (
+            (item.videoDetails?.downloadUrls && item.videoDetails.downloadUrls.length > 0 && !item.videoDetails.downloadUrls[0].includes('instagram.com/')) ||
+            (item.albumDetails?.imageUrls && item.albumDetails.imageUrls.length > (existing.albumDetails?.imageUrls?.length || 0))
+          ) {
+            const mergedItem: MediaItem = {
+              ...existing,
+              ...item,
+              downloadStatus: existing.downloadStatus !== 'idle' ? existing.downloadStatus : item.downloadStatus,
+              progress: existing.progress || item.progress,
+            };
+            existingMap.set(item.id, mergedItem);
+            itemsToSave.push(mergedItem);
+          }
         }
       }
 
@@ -115,10 +128,13 @@ export const useMediaStore = create<MediaState>((set) => ({
       // Tự động chọn các video mới thêm
       newlyAdded.forEach((i) => currentSelected.add(i.id));
 
-      // Lưu bất đồng bộ vào IndexedDB
+      // Lưu bất đồng bộ vào IndexedDB trong 1 transaction nguyên tử
       getDB().then(async (db) => {
         const tx = db.transaction([STORE_NAME, META_STORE], 'readwrite');
-        for (const item of newlyAdded) {
+        if (isDifferentAuthor) {
+          await tx.objectStore(STORE_NAME).clear();
+        }
+        for (const item of itemsToSave) {
           tx.objectStore(STORE_NAME).put(item);
         }
         if (updatedAuthor) {
@@ -226,6 +242,24 @@ export const useMediaStore = create<MediaState>((set) => ({
       scanStatusText: scanStatusText !== undefined ? scanStatusText : state.scanStatusText,
     })),
   setQueueStatus: (queueStatus) => set({ queueStatus }),
+
+  resetPendingDownloads: () => {
+    set((state) => ({
+      items: state.items.map((item) => {
+        if (item.downloadStatus === 'queued' || item.downloadStatus === 'downloading') {
+          return {
+            ...item,
+            downloadStatus: 'idle',
+            progress: 0,
+            downloadSpeed: '',
+            errorMessage: undefined,
+          };
+        }
+        return item;
+      }),
+      queueStatus: null,
+    }));
+  },
 
   clearAll: async () => {
     try {

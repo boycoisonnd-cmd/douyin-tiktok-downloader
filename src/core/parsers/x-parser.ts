@@ -12,39 +12,92 @@ export class XParser {
     let maxCursor: string | undefined = undefined;
 
     // Tìm kiếm các instructions trong response của X
-    const instructions =
+    let instructions: any[] =
       data.data?.user?.result?.timeline_v2?.timeline?.instructions ||
       data.data?.user?.result?.timeline?.timeline?.instructions ||
       data.data?.threaded_conversation_with_injections_v2?.instructions ||
+      data.data?.home?.home_timeline_urt?.instructions ||
+      data.data?.search_by_raw_query?.search_timeline?.timeline?.instructions ||
       [];
 
-    for (const inst of instructions) {
-      if (inst.type === 'TimelineAddEntries' && Array.isArray(inst.entries)) {
-        for (const entry of inst.entries) {
-          // Bóc tách cursor phân trang
-          if (entry.entryId?.startsWith('cursor-bottom-')) {
-            maxCursor = entry.content?.value || entry.content?.itemContent?.value;
-            continue;
+    // Nếu các đường dẫn cứng không có, tìm kiếm đệ quy bất kỳ mảng instructions nào
+    if (instructions.length === 0) {
+      const findInstructions = (obj: any): any[] | null => {
+        if (!obj || typeof obj !== 'object') return null;
+        if (Array.isArray(obj.instructions)) return obj.instructions;
+        for (const k of Object.keys(obj)) {
+          if (typeof obj[k] === 'object') {
+            const res = findInstructions(obj[k]);
+            if (res) return res;
           }
+        }
+        return null;
+      };
+      instructions = findInstructions(data) || [];
+    }
 
-          // Bóc tách Tweet
+    const processEntry = (entry: any) => {
+      if (!entry) return;
+
+      // Bóc tách cursor phân trang
+      if (entry.entryId?.startsWith('cursor-bottom-')) {
+        maxCursor = entry.content?.value || entry.content?.itemContent?.value;
+        return;
+      }
+
+      // Xử lý các entry dạng Module (Thread, Conversation)
+      if (Array.isArray(entry.content?.items)) {
+        for (const modItem of entry.content.items) {
           const tweetResult =
-            entry.content?.itemContent?.tweet_results?.result ||
-            entry.content?.content?.tweetResult?.result;
-
+            modItem.item?.itemContent?.tweet_results?.result ||
+            modItem.itemContent?.tweet_results?.result;
           if (tweetResult) {
-            try {
-              const parsed = this.parseSingleTweet(tweetResult);
-              if (parsed) {
-                items.push(parsed);
-                if (!authorInfo && parsed.author) {
-                  authorInfo = parsed.author;
-                }
-              }
-            } catch (err) {
-              console.warn('Lỗi khi bóc tách Tweet:', err, entry);
+            const parsed = this.parseSingleTweet(tweetResult);
+            if (parsed) {
+              items.push(parsed);
+              if (!authorInfo && parsed.author) authorInfo = parsed.author;
             }
           }
+        }
+        return;
+      }
+
+      // Bóc tách Tweet đơn lẻ
+      const tweetResult =
+        entry.content?.itemContent?.tweet_results?.result ||
+        entry.content?.content?.tweetResult?.result ||
+        entry.item?.itemContent?.tweet_results?.result;
+
+      if (tweetResult) {
+        try {
+          const parsed = this.parseSingleTweet(tweetResult);
+          if (parsed) {
+            items.push(parsed);
+            if (!authorInfo && parsed.author) {
+              authorInfo = parsed.author;
+            }
+          }
+        } catch (err) {
+          console.warn('Lỗi khi bóc tách Tweet:', err, entry);
+        }
+      }
+    };
+
+    for (const inst of instructions) {
+      // 1. Dạng TimelineAddEntries
+      if (inst.type === 'TimelineAddEntries' && Array.isArray(inst.entries)) {
+        for (const entry of inst.entries) {
+          processEntry(entry);
+        }
+      }
+      // 2. Dạng TimelinePinEntry (Tweet được ghim đầu trang)
+      else if (inst.type === 'TimelinePinEntry' && inst.entry) {
+        processEntry(inst.entry);
+      }
+      // 3. Dạng TimelineAddToModule
+      else if (Array.isArray(inst.moduleItems)) {
+        for (const mItem of inst.moduleItems) {
+          processEntry(mItem);
         }
       }
     }
@@ -110,7 +163,22 @@ export class XParser {
     };
 
     // Bóc tách Media (ảnh, video, gif)
-    const mediaList = legacy.extended_entities?.media || legacy.entities?.media || [];
+    let mediaList = legacy.extended_entities?.media || legacy.entities?.media || [];
+    if (!Array.isArray(mediaList) || mediaList.length === 0) {
+      // Kiểm tra Retweeted status
+      const retweetedLegacy = legacy.retweeted_status_result?.result?.legacy || legacy.retweeted_status_result?.result?.tweet?.legacy;
+      if (retweetedLegacy) {
+        mediaList = retweetedLegacy.extended_entities?.media || retweetedLegacy.entities?.media || [];
+      }
+      // Kiểm tra Quoted status
+      if (!Array.isArray(mediaList) || mediaList.length === 0) {
+        const quotedLegacy = tweet.quoted_status_result?.result?.legacy || tweet.quoted_status_result?.result?.tweet?.legacy;
+        if (quotedLegacy) {
+          mediaList = quotedLegacy.extended_entities?.media || quotedLegacy.entities?.media || [];
+        }
+      }
+    }
+
     if (!Array.isArray(mediaList) || mediaList.length === 0) {
       // Tweet chỉ chứa văn bản thông thường, bỏ qua
       return null;

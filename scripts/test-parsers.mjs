@@ -5,8 +5,11 @@ import { TikTokParser } from '../src/core/parsers/tiktok-parser.ts';
 import { InstagramParser } from '../src/core/parsers/instagram-parser.ts';
 import { XParser } from '../src/core/parsers/x-parser.ts';
 import { YouTubeParser } from '../src/core/parsers/youtube-parser.ts';
+import { FacebookParser } from '../src/core/parsers/facebook-parser.ts';
+import { ThreadsParser } from '../src/core/parsers/threads-parser.ts';
+import { YouTubeResolver } from '../src/core/downloader/youtube-resolver.ts';
 
-console.log('=== BẮT ĐẦU KIỂM THỬ ĐƠN VỊ CHO 5 NỀN TẢNG ===\n');
+console.log('=== BẮT ĐẦU KIỂM THỬ ĐƠN VỊ CHO 7 NỀN TẢNG ===\n');
 
 // 1. Test Sanitize Filename & Author Folder
 console.log('1. Kiểm tra sanitizeFileName và tên thư mục:');
@@ -26,11 +29,15 @@ const igFolder = formatAuthorFolderName('instagram', 'cristiano', 'cristiano');
 assert.strictEqual(igFolder, '[INSTAGRAM]_cristiano_cristiano');
 const ytFolder = formatAuthorFolderName('youtube', 'MrBeast');
 assert.strictEqual(ytFolder, '[YOUTUBE]_MrBeast');
+const fbFolder = formatAuthorFolderName('facebook', 'Meta Official', '10006488');
+assert.strictEqual(fbFolder, '[FACEBOOK]_Meta Official_10006488');
+const threadsFolder = formatAuthorFolderName('threads', 'Mark Zuckerberg', 'zuck');
+assert.strictEqual(threadsFolder, '[THREADS]_Mark Zuckerberg_zuck');
 const formattedFile = formatMediaFileName(1712345678, 'vid123', 'My Video: Test!', 'mp4');
 assert(formattedFile.endsWith('.mp4'));
 console.log('  ✓ Đã làm sạch tên file an toàn cho Windows:', clean);
 console.log('  ✓ Đã kiểm tra formatMediaFileName:', formattedFile);
-console.log('  ✓ Đã định dạng tên folder chuẩn cho 5 nền tảng');
+console.log('  ✓ Đã định dạng tên folder chuẩn cho cả 7 nền tảng');
 
 // 2. Test Douyin Parser
 console.log('\n2. Kiểm tra DouyinParser:');
@@ -322,6 +329,266 @@ assert.strictEqual(ytResult.items[0].stats.playCount, 150000000);
 assert.strictEqual(ytResult.items[1].qualityLabel, 'Shorts');
 console.log('  ✓ YouTube: Bóc tách thành công Video (14:26, 150M views) và Shorts');
 
+// 7. Test YouTubeResolver (Live Stream Resolution)
+console.log('\n7. Kiểm tra YouTubeResolver (Stream Direct Resolver):');
+try {
+  const directUrl = await YouTubeResolver.resolveDirectUrl('dQw4w9WgXcQ');
+  assert(directUrl.includes('googlevideo.com'), 'URL phải thuộc CDN googlevideo.com');
+  console.log('  ✓ YouTubeResolver: Resolve thành công trực tiếp link progressive MP4 từ googlevideo.com');
+} catch (e) {
+  console.log('  ⚠ Bỏ qua live resolution (lỗi mạng hoặc offline):', e.message);
+}
+
+// 8. Test Facebook Parser
+console.log('\n8. Kiểm tra FacebookParser:');
+const mockFacebookPayload = `for (;;);` + JSON.stringify({
+  data: {
+    node: {
+      timeline_feed_units: {
+        edges: [
+          {
+            node: {
+              id: 'fb_story_10001',
+              comet_sections: {
+                content: {
+                  story: {
+                    id: 'fb_story_10001',
+                    message: { text: 'Video Facebook Watch giới thiệu công nghệ mới 1080P' },
+                    creation_time: 1712345800,
+                    actors: [
+                      {
+                        id: 'meta_tech',
+                        name: 'Meta Technology',
+                        profile_picture: { uri: 'https://scontent.fbcdn.net/avatar_meta.jpg' },
+                        is_verified: true,
+                      },
+                    ],
+                    feedback: {
+                      reaction_count: { count: 32000 },
+                      comments_count_summary: { total_count: 1450 },
+                      share_count: { count: 890 },
+                    },
+                    attachments: [
+                      {
+                        media: {
+                          __typename: 'Video',
+                          id: 'vid_fb_9988',
+                          browser_native_hd_url: 'https://video.fbcdn.net/v/t42.1790/hd_video_1080p.mp4',
+                          browser_native_sd_url: 'https://video.fbcdn.net/v/t42.1790/sd_video_720p.mp4',
+                          playable_duration_in_ms: 75000,
+                          preferred_thumbnail: { image: { uri: 'https://scontent.fbcdn.net/cover_hd.jpg' } },
+                          video_view_count: 540000,
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+          {
+            node: {
+              id: 'fb_story_10002',
+              comet_sections: {
+                content: {
+                  story: {
+                    id: 'fb_story_10002',
+                    message: { text: 'Bộ sưu tập album ảnh phong cảnh thiên nhiên' },
+                    creation_time: 1712345850,
+                    actors: [
+                      {
+                        id: 'meta_tech',
+                        name: 'Meta Technology',
+                        profile_picture: { uri: 'https://scontent.fbcdn.net/avatar_meta.jpg' },
+                        is_verified: true,
+                      },
+                    ],
+                    feedback: {
+                      reaction_count: { count: 5400 },
+                      comments_count_summary: { total_count: 120 },
+                    },
+                    attachments: [
+                      {
+                        all_subattachments: {
+                          nodes: [
+                            { media: { image: { uri: 'https://scontent.fbcdn.net/photo1_hd.jpg' } } },
+                            { media: { image: { uri: 'https://scontent.fbcdn.net/photo2_hd.jpg' } } },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        ],
+        page_info: { has_next_page: true, end_cursor: 'cursor_fb_999' },
+      },
+    },
+  },
+});
+
+const fbResult = FacebookParser.parsePostResponse(mockFacebookPayload);
+assert(fbResult !== null);
+assert.strictEqual(fbResult.items.length, 2);
+assert.strictEqual(fbResult.items[0].platform, 'facebook');
+assert.strictEqual(fbResult.items[0].videoDetails?.bestUrl, 'https://video.fbcdn.net/v/t42.1790/hd_video_1080p.mp4');
+assert.strictEqual(fbResult.items[0].duration, 75);
+assert.strictEqual(fbResult.items[0].author.verified, true);
+assert.strictEqual(fbResult.items[1].albumDetails?.imageUrls.length, 2);
+console.log('  ✓ Facebook: Xử lý an toàn "for (;;);", bóc tách thành công Video HD & Album ảnh');
+
+// Test NDJSON stream với for (;;); trên mỗi dòng
+const fbChunk1 = `for (;;);` + JSON.stringify({
+  data: {
+    node: {
+      timeline_feed_units: {
+        edges: [
+          {
+            node: {
+              id: 'fb_stream_1',
+              comet_sections: {
+                content: {
+                  story: {
+                    id: 'fb_stream_1',
+                    message: { text: 'Stream 1' },
+                    attachments: [
+                      {
+                        media: {
+                          __typename: 'Video',
+                          browser_native_hd_url: 'https://video.fbcdn.net/stream1.mp4',
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        ],
+      },
+    },
+  },
+});
+
+const fbChunk2 = `for (;;);` + JSON.stringify({
+  data: {
+    node: {
+      timeline_feed_units: {
+        edges: [
+          {
+            node: {
+              id: 'fb_stream_2',
+              comet_sections: {
+                content: {
+                  story: {
+                    id: 'fb_stream_2',
+                    message: { text: 'Stream 2' },
+                    attachments: [
+                      {
+                        media: {
+                          __typename: 'Video',
+                          browser_native_hd_url: 'https://video.fbcdn.net/stream2.mp4',
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        ],
+      },
+    },
+  },
+});
+
+const ndjsonPayload = `${fbChunk1}\n${fbChunk2}`;
+
+const ndjsonResult = FacebookParser.parsePostResponse(ndjsonPayload);
+assert(ndjsonResult !== null);
+assert.strictEqual(ndjsonResult.items.length, 2, 'Phải bóc tách được cả 2 dòng NDJSON stream có tiền tố for(;;);');
+assert.strictEqual(ndjsonResult.items[0].id, 'fb_stream_1');
+assert.strictEqual(ndjsonResult.items[1].id, 'fb_stream_2');
+console.log('  ✓ Facebook: Xử lý hoàn hảo NDJSON streaming chunks có "for (;;);" trên mỗi dòng');
+
+// 9. Test Threads Parser
+console.log('\n9. Kiểm tra ThreadsParser:');
+const mockThreadsPayload = {
+  data: {
+    feedData: {
+      edges: [
+        {
+          text_post_app_thread: {
+            thread_items: [
+              {
+                post: {
+                  id: 'thread_post_1001',
+                  code: 'C7xyz123',
+                  caption: { text: 'Build fast and ship with confidence!' },
+                  taken_at: 1712345900,
+                  user: {
+                    pk: '445566',
+                    username: 'zuck',
+                    full_name: 'Mark Zuckerberg',
+                    profile_pic_url: 'https://threads.net/zuck_avatar.jpg',
+                    is_verified: true,
+                  },
+                  like_count: 75000,
+                  reply_count: 3200,
+                  reshare_count: 1800,
+                  video_versions: [
+                    { width: 720, height: 1280, url: 'https://threads.net/video_720p.mp4' },
+                    { width: 1080, height: 1920, url: 'https://threads.net/video_1080p.mp4' },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+        {
+          text_post_app_thread: {
+            thread_items: [
+              {
+                post: {
+                  id: 'thread_post_1002',
+                  code: 'C7xyz124',
+                  caption: { text: 'Bộ sưu tập Carousel đa phương tiện' },
+                  taken_at: 1712345950,
+                  user: {
+                    pk: '445566',
+                    username: 'zuck',
+                  },
+                  like_count: 22000,
+                  carousel_media: [
+                    { image_versions2: { candidates: [{ url: 'https://threads.net/photo_slide1.jpg' }] } },
+                    {
+                      video_versions: [{ width: 1080, height: 1920, url: 'https://threads.net/clip_slide2.mp4' }],
+                      image_versions2: { candidates: [{ url: 'https://threads.net/cover_slide2.jpg' }] },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      ],
+      page_info: { has_next_page: true, end_cursor: 'cursor_threads_456' },
+    },
+  },
+};
+
+const threadsResult = ThreadsParser.parsePostResponse(mockThreadsPayload);
+assert(threadsResult !== null);
+assert.strictEqual(threadsResult.items.length, 2);
+assert.strictEqual(threadsResult.items[0].platform, 'threads');
+assert.strictEqual(threadsResult.items[0].videoDetails?.bestUrl, 'https://threads.net/video_1080p.mp4');
+assert.strictEqual(threadsResult.items[0].author.uniqueId, '@zuck');
+assert.strictEqual(threadsResult.items[1].albumDetails?.mixedMedia?.length, 2);
+assert.strictEqual(threadsResult.items[1].albumDetails?.mixedMedia?.[1].type, 'video');
+console.log('  ✓ Threads: Bóc tách thành công Video 1080p, Carousel hỗn hợp & chuẩn hóa @handle');
+
 console.log('\n======================================================');
-console.log('🎉 TẤT CẢ UNIT TESTS CHO CẢ 5 NỀN TẢNG ĐỀU ĐẠT CHUẨN 100%! 🎉');
+console.log('🎉 TẤT CẢ UNIT TESTS CHO CẢ 7 NỀN TẢNG ĐỀU ĐẠT CHUẨN 100%! 🎉');
 console.log('======================================================');

@@ -1,11 +1,13 @@
 # Universal Social Media Video Downloader Pro (Chrome Extension Manifest V3)
 
-Tiện ích mở rộng Google Chrome cao cấp hỗ trợ quét toàn bộ video / album ảnh từ **5 nền tảng mạng xã hội hàng đầu**:
+Tiện ích mở rộng Google Chrome cao cấp hỗ trợ quét toàn bộ video / album ảnh từ **7 nền tảng mạng xã hội hàng đầu**:
 1. 🎵 **Douyin** (Video 1080P/2K không watermark & Album ảnh 图集 kèm nhạc)
 2. 🎬 **TikTok** (Video sạch logo playAddr & Album ảnh)
 3. 📸 **Instagram** (Reels 1080P, Posts và Carousels hỗn hợp ảnh + video)
 4. 🐦 **X (Twitter)** (Video MP4 bitrate cao nhất & Ảnh gốc `orig` chất lượng cao)
 5. ▶️ **YouTube** (YouTube Videos và Shorts độ nét cao)
+6. 📘 **Facebook** (Facebook Reels 1080P, Watch Videos HD, Posts & Album ảnh)
+7. 🧵 **Threads** (Video 1080P, Posts đơn, Carousels hỗn hợp ảnh + video)
 
 Tất cả video được tải hàng loạt trực tiếp vào thư mục trên máy tính của bạn thông qua **File System Access API**.
 
@@ -13,7 +15,7 @@ Tất cả video được tải hàng loạt trực tiếp vào thư mục trên
 
 ## ✨ Tính năng nổi bật
 
-1. **Hỗ trợ trọn vẹn 5 nền tảng mạng xã hội**:
+1. **Hỗ trợ trọn vẹn 7 nền tảng mạng xã hội**:
    - Tự động nhận diện thương hiệu, tên tác giả, avatar và tích xanh (verified) trên từng nền tảng.
    - Tự động tạo thư mục chuẩn hóa theo từng kênh:
      - `[DOUYIN]_TenKenh_ID/`
@@ -21,6 +23,8 @@ Tất cả video được tải hàng loạt trực tiếp vào thư mục trên
      - `[INSTAGRAM]_cristiano_@cristiano/`
      - `[X]_elonmusk_@elonmusk/`
      - `[YOUTUBE]_MrBeast_@MrBeast/`
+     - `[FACEBOOK]_TenFanpage_ID/`
+     - `[THREADS]_TenTacGia_@handle/`
 2. **Giao diện Chrome Side Panel hiện đại**:
    - Ghim cố định ở cạnh phải trình duyệt, không bị gián đoạn hay tự động tắt như popup.
    - Nút **"Làm mới"** độc lập giúp xóa sạch danh sách cũ và chuyển đổi kênh mượt mà.
@@ -31,11 +35,15 @@ Tất cả video được tải hàng loạt trực tiếp vào thư mục trên
    - Instagram: Sắp xếp `video_versions` lấy độ phân giải cao nhất, xử lý Carousel hỗn hợp (vừa có ảnh vừa có clip).
    - X (Twitter): Phân tích GraphQL, lọc variants MP4 bitrate cao nhất và ảnh `?name=orig`.
    - YouTube: Hỗ trợ cả video thông thường và Shorts.
+   - Facebook: Xử lý tiền tố `for (;;);` GraphQL Relay, bóc tách `browser_native_hd_url` và `all_subattachments`.
+   - Threads: Bóc tách Barcelona GraphQL, sắp xếp `video_versions` 1080P và carousel hỗn hợp.
 4. **Cơ chế DeclarativeNetRequest chống lỗi 403 Forbidden**:
    - Tự động sửa Header `Referer` và `Origin` tương ứng cho từng CDN:
      - `douyinvod.com`, `amemv.com` -> `Referer: https://www.douyin.com/`
      - `tiktokcdn.com` -> `Referer: https://www.tiktok.com/`
      - `cdninstagram.com`, `fbcdn.net` -> `Referer: https://www.instagram.com/`
+     - `fbsbx.com`, `video*.fbcdn.net` -> `Referer: https://www.facebook.com/`
+     - `threads.net` -> `Referer: https://www.threads.net/`
      - `twimg.com` -> `Referer: https://x.com/`
      - `googlevideo.com` -> `Referer: https://www.youtube.com/`
 5. **Ghi trực tiếp vào Ổ cứng qua Streams API**:
@@ -69,6 +77,11 @@ Tất cả video được tải hàng loạt trực tiếp vào thư mục trên
    - Instagram: `instagram.com/...`
    - X: `x.com/...` hoặc `x.com/.../media`
    - YouTube: `youtube.com/@...` hoặc `youtube.com/@.../videos`
+   - Facebook: `facebook.com/...` (Profile, Page, Watch, Reels)
+   - Threads: `threads.net/@...` (Profile, Posts)
+2. **Mở Side Panel**: Click vào biểu tượng tiện ích trên thanh công cụ của trình duyệt.
+3. **Bấm "Quét toàn bộ video"**: Extension sẽ tự động cuộn và bóc tách danh sách video/ảnh theo thời gian thực.
+4. **Tải hàng loạt**: Chọn các video muốn tải, chọn số luồng tải và bấm **"Tải xuống"** -> Chọn thư mục bạn muốn lưu trên máy tính.
 2. **Mở Side Panel**: Click vào biểu tượng tiện ích trên thanh công cụ của trình duyệt.
 3. **Bấm "Quét toàn bộ video"**: Extension sẽ tự động cuộn và bóc tách danh sách video/ảnh theo thời gian thực.
 4. **Tải hàng loạt**: Chọn các video muốn tải, chọn số luồng tải và bấm **"Tải xuống"** -> Chọn thư mục bạn muốn lưu trên máy tính.

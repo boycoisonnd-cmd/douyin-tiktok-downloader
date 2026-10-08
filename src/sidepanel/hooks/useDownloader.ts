@@ -15,6 +15,7 @@ export function useDownloader() {
     queueStatus,
     updateItemProgress,
     setQueueStatus,
+    resetPendingDownloads,
   } = useMediaStore();
 
   const queueManagerRef = useRef<QueueManager | null>(null);
@@ -62,8 +63,10 @@ export function useDownloader() {
       );
     } catch (err: any) {
       alert(`Lỗi khi bắt đầu tải: ${err.message}`);
+    } finally {
+      resetPendingDownloads();
     }
-  }, [items, selectedIds, author, platform, concurrency, updateItemProgress, setQueueStatus]);
+  }, [items, selectedIds, author, platform, concurrency, updateItemProgress, resetPendingDownloads]);
 
   // Tải 1 video đơn lẻ
   const downloadSingleItem = useCallback(
@@ -85,7 +88,7 @@ export function useDownloader() {
         alert(`Lỗi khi tải video: ${err.message}`);
       }
     },
-    [author, updateItemProgress]
+    [author, platform, updateItemProgress]
   );
 
   // Hủy tiến trình tải
@@ -93,7 +96,8 @@ export function useDownloader() {
     if (queueManagerRef.current) {
       queueManagerRef.current.cancel();
     }
-  }, []);
+    resetPendingDownloads();
+  }, [resetPendingDownloads]);
 
   return {
     isDownloading: queueStatus?.isRunning ?? false,

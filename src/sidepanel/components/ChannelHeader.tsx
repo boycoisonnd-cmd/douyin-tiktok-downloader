@@ -4,13 +4,22 @@ import { useScanner } from '../hooks/useScanner';
 import { Video, Image, CheckCircle2, User, RotateCcw } from 'lucide-react';
 
 export const ChannelHeader: React.FC = () => {
-  const { author, platform, items } = useMediaStore();
+  const { author, platform, items, detectedTab } = useMediaStore();
   const { refreshForCurrentTab } = useScanner();
 
   const totalItems = items.length;
   const videoCount = items.filter((i) => i.type === 'video').length;
   const albumCount = items.filter((i) => i.type === 'album').length;
   const completedCount = items.filter((i) => i.downloadStatus === 'completed').length;
+
+  const currentPlatform = platform || detectedTab?.platform || null;
+  const currentAuthor = author || (detectedTab?.platform ? {
+    id: detectedTab.channelId || '',
+    uniqueId: detectedTab.channelId || '',
+    name: detectedTab.channelName || detectedTab.channelId || 'Kênh mạng xã hội',
+    avatar: detectedTab.channelAvatar || '',
+    verified: false,
+  } : null);
 
   const getPlatformInfo = (plat: string | null) => {
     switch (plat) {
@@ -24,12 +33,16 @@ export const ChannelHeader: React.FC = () => {
         return { label: 'X', badgeClass: 'bg-black text-white border border-[#1D9BF0]', ringClass: 'from-[#1D9BF0] to-gray-800' };
       case 'youtube':
         return { label: 'YouTube', badgeClass: 'bg-[#FF0000] text-white', ringClass: 'from-[#FF0000] to-red-800' };
+      case 'facebook':
+        return { label: 'Facebook', badgeClass: 'bg-[#1877F2] text-white', ringClass: 'from-[#1877F2] via-[#0866FF] to-blue-900' };
+      case 'threads':
+        return { label: 'Threads', badgeClass: 'bg-black text-white border border-gray-600', ringClass: 'from-neutral-100 via-neutral-500 to-black' };
       default:
         return { label: '', badgeClass: 'bg-gray-700 text-gray-200', ringClass: 'from-[#25F4EE] via-[#FE2C55] to-[#FF007A]' };
     }
   };
 
-  const platformInfo = getPlatformInfo(platform);
+  const platformInfo = getPlatformInfo(currentPlatform);
 
   return (
     <div className="bg-[#1F2232] border-b border-[#2E3245] p-3.5 shadow-md">
@@ -37,10 +50,10 @@ export const ChannelHeader: React.FC = () => {
         {/* Avatar with gradient ring */}
         <div className="relative">
           <div className={`w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr ${platformInfo.ringClass}`}>
-            {author?.avatar ? (
+            {currentAuthor?.avatar ? (
               <img
-                src={author.avatar}
-                alt={author.name}
+                src={currentAuthor.avatar}
+                alt={currentAuthor.name}
                 className="w-full h-full rounded-full object-cover bg-gray-800"
               />
             ) : (
@@ -49,7 +62,7 @@ export const ChannelHeader: React.FC = () => {
               </div>
             )}
           </div>
-          {platform && (
+          {currentPlatform && (
             <span
               className={`absolute -bottom-1 -right-1 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider shadow ${platformInfo.badgeClass}`}
             >
@@ -63,9 +76,9 @@ export const ChannelHeader: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 min-w-0">
               <h2 className="text-sm font-bold text-white truncate leading-tight">
-                {author?.name || 'Chưa phát hiện kênh'}
+                {typeof currentAuthor?.name === 'string' ? currentAuthor.name : (currentAuthor?.name ? String(currentAuthor.name) : 'Chưa phát hiện kênh')}
               </h2>
-              {author?.verified && (
+              {currentAuthor?.verified && (
                 <span title="Tài khoản đã xác minh" className="text-sky-400 shrink-0">
                   <CheckCircle2 size={13} className="fill-sky-400/20" />
                 </span>
@@ -80,7 +93,11 @@ export const ChannelHeader: React.FC = () => {
             </button>
           </div>
           <p className="text-[11px] text-gray-400 truncate mt-0.5">
-            {author?.uniqueId ? `@${author.uniqueId}` : (author?.id ? `ID: ${author.id}` : 'Mở tab Douyin, TikTok, IG, X hoặc YouTube')}
+            {typeof currentAuthor?.uniqueId === 'string' && currentAuthor.uniqueId
+              ? (currentAuthor.uniqueId.startsWith('@') ? currentAuthor.uniqueId : `@${currentAuthor.uniqueId}`)
+              : typeof currentAuthor?.id === 'string' && currentAuthor.id
+              ? (currentAuthor.id.startsWith('@') ? currentAuthor.id : `ID: ${currentAuthor.id}`)
+              : 'Mở tab Douyin, TikTok, IG, X, YouTube, FB hoặc Threads'}
           </p>
         </div>
       </div>

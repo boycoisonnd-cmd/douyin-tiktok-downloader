@@ -7,24 +7,66 @@ export class InstagramParser {
   public static parsePostResponse(data: any): ScanResponsePayload | null {
     if (!data || typeof data !== 'object') return null;
 
-    // 1. Dạng REST feed thông thường (/api/v1/feed/user/ hoặc /api/v1/clips/user/)
+    // 1. Trích xuất danh sách rawItems từ các biến thể cấu trúc JSON của Instagram
     let rawItems: any[] = [];
     let hasMore = false;
     let maxCursor: string | undefined = undefined;
 
+    // Dạng REST thông thường
     if (Array.isArray(data.items)) {
       rawItems = data.items;
       hasMore = Boolean(data.more_available);
       maxCursor = data.next_max_id;
     }
-    // 2. Dạng GraphQL (edge_owner_to_timeline_media)
-    else if (data.data?.user?.edge_owner_to_timeline_media) {
-      const timeline = data.data.user.edge_owner_to_timeline_media;
+    // Dạng clips_items (Reels API)
+    else if (Array.isArray(data.clips_items)) {
+      rawItems = data.clips_items.map((c: any) => c.media || c);
+      hasMore = Boolean(data.paging_info?.has_more ?? data.more_available);
+      maxCursor = data.paging_info?.max_id ?? data.next_max_id;
+    }
+    // Dạng GraphQL hiện đại xdt_api__v1__feed__user_timeline_graphql_connection
+    else if (
+      data.data?.xdt_api__v1__feed__user_timeline_graphql_connection?.edges ||
+      data.xdt_api__v1__feed__user_timeline_graphql_connection?.edges
+    ) {
+      const conn =
+        data.data?.xdt_api__v1__feed__user_timeline_graphql_connection ||
+        data.xdt_api__v1__feed__user_timeline_graphql_connection;
+      rawItems = (conn.edges || []).map((e: any) => e.node).filter(Boolean);
+      hasMore = Boolean(conn.page_info?.has_next_page);
+      maxCursor = conn.page_info?.end_cursor;
+    }
+    // Dạng GraphQL Reels xdt_api__v1__clips__user__connection_v2
+    else if (
+      data.data?.xdt_api__v1__clips__user__connection_v2?.edges ||
+      data.xdt_api__v1__clips__user__connection_v2?.edges
+    ) {
+      const conn =
+        data.data?.xdt_api__v1__clips__user__connection_v2 ||
+        data.xdt_api__v1__clips__user__connection_v2;
+      rawItems = (conn.edges || []).map((e: any) => e.node?.media || e.node).filter(Boolean);
+      hasMore = Boolean(conn.page_info?.has_next_page);
+      maxCursor = conn.page_info?.end_cursor;
+    }
+    // Dạng GraphQL truyền thống edge_owner_to_timeline_media
+    else if (data.data?.user?.edge_owner_to_timeline_media || data.user?.edge_owner_to_timeline_media) {
+      const timeline = data.data?.user?.edge_owner_to_timeline_media || data.user?.edge_owner_to_timeline_media;
       rawItems = (timeline.edges || []).map((e: any) => e.node).filter(Boolean);
       hasMore = Boolean(timeline.page_info?.has_next_page);
       maxCursor = timeline.page_info?.end_cursor;
     }
-    // 3. Dạng single item
+    // Dạng GraphQL video timeline edge_felix_video_timeline
+    else if (data.data?.user?.edge_felix_video_timeline || data.user?.edge_felix_video_timeline) {
+      const timeline = data.data?.user?.edge_felix_video_timeline || data.user?.edge_felix_video_timeline;
+      rawItems = (timeline.edges || []).map((e: any) => e.node).filter(Boolean);
+      hasMore = Boolean(timeline.page_info?.has_next_page);
+      maxCursor = timeline.page_info?.end_cursor;
+    }
+    // Dạng shortcode media (single post)
+    else if (data.data?.xdt_shortcode_media || data.graphql?.shortcode_media) {
+      rawItems = [data.data?.xdt_shortcode_media || data.graphql?.shortcode_media];
+    }
+    // Dạng single item
     else if (data.items && typeof data.items === 'object') {
       rawItems = [data.items];
     }
@@ -69,9 +111,12 @@ export class InstagramParser {
    */
   public static parseSingleItem(raw: any): MediaItem | null {
     if (!raw) return null;
+    if (raw.media) raw = raw.media;
+    if (raw.node) raw = raw.node;
 
-    const id = String(raw.id || raw.pk || raw.shortcode || '');
+    const id = String(raw.id || raw.pk || raw.code || raw.shortcode || '');
     if (!id) return null;
+    const shortcode = String(raw.code || raw.shortcode || id);
 
     // Title / Caption
     let title = '';
@@ -80,7 +125,7 @@ export class InstagramParser {
     } else if (raw.edge_media_to_caption?.edges?.[0]?.node?.text) {
       title = raw.edge_media_to_caption.edges[0].node.text;
     } else {
-      title = `Instagram_${raw.code || id}`;
+      title = `Instagram_${shortcode}`;
     }
 
     const createTime = raw.taken_at || raw.taken_at_timestamp || Math.floor(Date.now() / 1000);
@@ -149,11 +194,12 @@ export class InstagramParser {
         downloadStatus: 'idle',
         progress: 0,
         qualityLabel: `Carousel (${mixedMedia.length} mục)`,
+        sourceUrl: `https://www.instagram.com/p/${shortcode}/`,
       };
     }
 
     // Video hoặc Reel (media_type === 2 hoặc có video_versions hoặc GraphVideo)
-    const isVideo = raw.media_type === 2 || raw.is_video || Boolean(raw.video_versions) || raw.__typename === 'GraphVideo';
+    const isVideo = raw.media_type === 2 || raw.is_video || Boolean(raw.video_versions) || raw.__typename === 'GraphVideo' || raw.__typename === 'XDTGraphVideo';
 
     if (isVideo) {
       const videoVersions = raw.video_versions || [];
@@ -174,6 +220,11 @@ export class InstagramParser {
       const coverUrl = raw.image_versions2?.candidates?.[0]?.url || raw.display_url || '';
       const duration = Number(raw.video_duration || 0);
       const isReel = raw.product_type === 'clips' || raw.is_dash_eligible;
+      const postUrl = `https://www.instagram.com/${isReel ? 'reel' : 'p'}/${shortcode}/`;
+
+      if (downloadUrls.length === 0) {
+        downloadUrls.push(postUrl);
+      }
 
       return {
         id,
@@ -186,13 +237,14 @@ export class InstagramParser {
         author,
         videoDetails: {
           downloadUrls,
-          bestUrl: downloadUrls[0] || '',
+          bestUrl: downloadUrls[0] || postUrl,
           qualityLabel: isReel ? 'Reels 1080P' : 'Video HD',
         },
         createTime,
         downloadStatus: 'idle',
         progress: 0,
         qualityLabel: isReel ? 'Reels' : '1080P',
+        sourceUrl: postUrl,
       };
     }
 
@@ -214,6 +266,7 @@ export class InstagramParser {
       downloadStatus: 'idle',
       progress: 0,
       qualityLabel: 'Ảnh HD',
+      sourceUrl: `https://www.instagram.com/p/${shortcode}/`,
     };
   }
 }

@@ -38,6 +38,10 @@ export const MediaItemCard: React.FC<MediaItemCardProps> = ({ item }) => {
         return { label: 'X', className: 'bg-black text-[#1D9BF0] border border-[#1D9BF0]' };
       case 'youtube':
         return { label: 'YouTube', className: 'bg-[#FF0000] text-white' };
+      case 'facebook':
+        return { label: 'Facebook', className: 'bg-[#1877F2] text-white' };
+      case 'threads':
+        return { label: 'Threads', className: 'bg-black text-white border border-gray-600' };
       default:
         return null;
     }
@@ -121,7 +125,7 @@ export const MediaItemCard: React.FC<MediaItemCardProps> = ({ item }) => {
                   ? item.videoDetails?.height && item.videoDetails.height >= 1080
                     ? '1080P'
                     : 'HD'
-                  : `${(item.albumDetails?.mixedMedia?.length || item.albumDetails?.imageUrls.length || 1)} mục`)}
+                  : `${(item.albumDetails?.mixedMedia?.length || item.albumDetails?.imageUrls?.length || 1)} mục`)}
             </span>
           </span>
 
